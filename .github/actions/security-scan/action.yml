@@ -47,7 +47,7 @@ runs:
 
     # ---------- 2) Pre-build: Trivy FS ----------
     - name: Trivy FS scan (report)
-      uses: aquasecurity/trivy-action@0.33.1
+      uses: aquasecurity/trivy-action@v0.33.1
       with:
         scan-type: fs
         scan-ref: .
@@ -66,7 +66,7 @@ runs:
         category: trivy-fs
 
     - name: Trivy FS gate
-      uses: aquasecurity/trivy-action@0.33.1
+      uses: aquasecurity/trivy-action@v0.33.1
       with:
         scan-type: fs
         scan-ref: .
@@ -93,7 +93,7 @@ runs:
 
     - name: Trivy image scan (report)
       if: inputs.scan-image == 'true'
-      uses: aquasecurity/trivy-action@0.33.1
+      uses: aquasecurity/trivy-action@v0.33.1
       with:
         image-ref: ${{ inputs.image-name }}:${{ github.sha }}
         severity: ${{ inputs.report-severity }}
@@ -111,7 +111,7 @@ runs:
 
     - name: Trivy image gate
       if: inputs.scan-image == 'true'
-      uses: aquasecurity/trivy-action@0.33.1
+      uses: aquasecurity/trivy-action@v0.33.1
       with:
         image-ref: ${{ inputs.image-name }}:${{ github.sha }}
         severity: ${{ inputs.fail-severity }}
