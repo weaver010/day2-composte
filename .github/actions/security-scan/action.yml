@@ -29,6 +29,9 @@ inputs:
     description: "Severities that fail the pipeline"
     required: false
     default: "CRITICAL"
+  sonar-token:
+    description: "SonarQube authentication token"
+    required: true
 
 runs:
   using: composite
@@ -128,3 +131,8 @@ runs:
         ignore-unfixed: true
         format: table
         exit-code: "1"
+
+    - name: SonarQube Scan
+      uses: SonarSource/sonarqube-scan-action@v6
+      env:
+        SONAR_TOKEN: ${{ inputs.sonar-token }}

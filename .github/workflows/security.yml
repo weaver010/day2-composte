@@ -31,3 +31,5 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           image-name: frontend-strwaberry
           fail-severity: CRITICAL
+          sonar-token: ${{ secrets.mysec}}
+       
