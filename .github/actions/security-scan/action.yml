@@ -136,3 +136,8 @@ runs:
       uses: SonarSource/sonarqube-scan-action@v6
       env:
         SONAR_TOKEN: ${{ inputs.sonar-token }}
+
+    - name: SonarQube Quality Gate
+      uses: SonarSource/sonarqube-quality-gate-action@v1
+      env:
+        SONAR_TOKEN: ${{ inputs.sonar-token }}
