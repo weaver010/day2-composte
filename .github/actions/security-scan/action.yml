@@ -1,0 +1,120 @@
+name: "Security Scan"
+description: "Gitleaks + TruffleHog secret scan, Trivy FS scan (pre-build), Docker build, Trivy image scan (post-build)"
+
+inputs:
+  github-token:
+    description: "GitHub token (required by Gitleaks)"
+    required: true
+  image-name:
+    description: "Local image name to build and scan"
+    required: false
+    default: "frontend-strwaberry"
+  context:
+    description: "Docker build context"
+    required: false
+    default: "."
+  scan-image:
+    description: "Build and scan the Docker image (true/false)"
+    required: false
+    default: "true"
+  upload-sarif:
+    description: "Upload Trivy SARIF to the Security tab (true/false). Needs security-events: write"
+    required: false
+    default: "true"
+  report-severity:
+    description: "Severities reported in SARIF"
+    required: false
+    default: "HIGH,CRITICAL"
+  fail-severity:
+    description: "Severities that fail the pipeline"
+    required: false
+    default: "CRITICAL"
+
+runs:
+  using: composite
+  steps:
+    # ---------- 1) Secret scanning (checkout with fetch-depth: 0 must be done by the caller) ----------
+    - name: Gitleaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+
+    - name: TruffleHog
+      uses: trufflesecurity/trufflehog@main   # pin to a release tag / SHA
+      with:
+        path: ./
+        extra_args: --results=verified,unknown
+
+    # ---------- 2) Pre-build: Trivy FS ----------
+    - name: Trivy FS scan (report)
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        scan-type: fs
+        scan-ref: .
+        scanners: vuln,secret,misconfig
+        severity: ${{ inputs.report-severity }}
+        ignore-unfixed: true
+        format: sarif
+        output: trivy-fs.sarif
+        exit-code: "0"
+
+    - name: Upload Trivy FS SARIF
+      if: always() && inputs.upload-sarif == 'true'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: trivy-fs.sarif
+        category: trivy-fs
+
+    - name: Trivy FS gate
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        scan-type: fs
+        scan-ref: .
+        scanners: vuln,secret,misconfig
+        severity: ${{ inputs.fail-severity }}
+        ignore-unfixed: true
+        exit-code: "1"
+
+    # ---------- 3) Post-build: build image, then Trivy image ----------
+    - name: Set up Buildx
+      if: inputs.scan-image == 'true'
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build image
+      if: inputs.scan-image == 'true'
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ inputs.context }}
+        load: true
+        push: false
+        tags: ${{ inputs.image-name }}:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Trivy image scan (report)
+      if: inputs.scan-image == 'true'
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        image-ref: ${{ inputs.image-name }}:${{ github.sha }}
+        severity: ${{ inputs.report-severity }}
+        ignore-unfixed: true
+        format: sarif
+        output: trivy-image.sarif
+        exit-code: "0"
+
+    - name: Upload Trivy image SARIF
+      if: always() && inputs.scan-image == 'true' && inputs.upload-sarif == 'true'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: trivy-image.sarif
+        category: trivy-image
+
+    - name: Trivy image gate
+      if: inputs.scan-image == 'true'
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        image-ref: ${{ inputs.image-name }}:${{ github.sha }}
+        severity: ${{ inputs.fail-severity }}
+        ignore-unfixed: true
+        format: table
+        exit-code: "1"
