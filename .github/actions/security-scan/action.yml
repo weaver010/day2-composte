@@ -45,10 +45,17 @@ runs:
         path: ./
         extra_args: --results=verified,unknown
 
+    - name: Install Trivy CLI
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y trivy
+
     # ---------- 2) Pre-build: Trivy FS ----------
     - name: Trivy FS scan (report)
       uses: aquasecurity/trivy-action@v0.33.1
       with:
+        skip-setup-trivy: true
         scan-type: fs
         scan-ref: .
         scanners: vuln,secret,misconfig
@@ -68,6 +75,7 @@ runs:
     - name: Trivy FS gate
       uses: aquasecurity/trivy-action@v0.33.1
       with:
+        skip-setup-trivy: true
         scan-type: fs
         scan-ref: .
         scanners: vuln,secret,misconfig
@@ -95,6 +103,7 @@ runs:
       if: inputs.scan-image == 'true'
       uses: aquasecurity/trivy-action@v0.33.1
       with:
+        skip-setup-trivy: true
         image-ref: ${{ inputs.image-name }}:${{ github.sha }}
         severity: ${{ inputs.report-severity }}
         ignore-unfixed: true
@@ -113,6 +122,7 @@ runs:
       if: inputs.scan-image == 'true'
       uses: aquasecurity/trivy-action@v0.33.1
       with:
+        skip-setup-trivy: true
         image-ref: ${{ inputs.image-name }}:${{ github.sha }}
         severity: ${{ inputs.fail-severity }}
         ignore-unfixed: true
